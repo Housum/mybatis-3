@@ -23,6 +23,7 @@ import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ * 具有动态语言的SQL OGNL进行解析
  * @author Clinton Begin
  */
 public class DynamicSqlSource implements SqlSource {

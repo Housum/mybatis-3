@@ -50,12 +50,22 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 
 /**
+ * mapper级别的
  * @author Clinton Begin
  */
 public class MapperBuilderAssistant extends BaseBuilder {
 
+  /**
+   * namespace
+   */
   private String currentNamespace;
+  /**
+   * 资源地址
+   */
   private String resource;
+  /**
+   * 缓存
+   */
   private Cache currentCache;
   private boolean unresolvedCacheRef; // issue #676
 
@@ -82,6 +92,9 @@ public class MapperBuilderAssistant extends BaseBuilder {
     this.currentNamespace = currentNamespace;
   }
 
+  /**
+   * 通过当前namespace加上base构建唯一的路径
+   */
   public String applyCurrentNamespace(String base, boolean isReference) {
     if (base == null) {
       return null;
@@ -138,6 +151,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .properties(props)
         .build();
     configuration.addCache(cache);
+    //设置cache
     currentCache = cache;
     return cache;
   }
@@ -287,18 +301,22 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .lang(lang)
         .resultOrdered(resultOrdered)
         .resultSets(resultSets)
+            //获取resultMap
         .resultMaps(getStatementResultMaps(resultMap, resultType, id))
         .resultSetType(resultSetType)
         .flushCacheRequired(valueOrDefault(flushCache, !isSelect))
         .useCache(valueOrDefault(useCache, isSelect))
         .cache(currentCache);
 
+    //获取ParameterMap
     ParameterMap statementParameterMap = getStatementParameterMap(parameterMap, parameterType, id);
     if (statementParameterMap != null) {
       statementBuilder.parameterMap(statementParameterMap);
     }
 
+    //将MappedStatement加入到其中
     MappedStatement statement = statementBuilder.build();
+    //添加到配置中心
     configuration.addMappedStatement(statement);
     return statement;
   }
@@ -330,6 +348,9 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return parameterMap;
   }
 
+  /**
+   * 对于ResultType或者是ResultMap最后都是构建成ResultMap对象
+   */
   private List<ResultMap> getStatementResultMaps(
       String resultMap,
       Class<?> resultType,
@@ -338,6 +359,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
 
     List<ResultMap> resultMaps = new ArrayList<ResultMap>();
     if (resultMap != null) {
+      //这部分是名称
       String[] resultMapNames = resultMap.split(",");
       for (String resultMapName : resultMapNames) {
         try {
@@ -347,6 +369,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         }
       }
     } else if (resultType != null) {
+      //将返回类型包装成ResultMap
       ResultMap inlineResultMap = new ResultMap.Builder(
           configuration,
           statementId + "-Inline",

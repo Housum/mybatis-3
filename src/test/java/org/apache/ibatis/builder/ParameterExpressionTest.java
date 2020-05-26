@@ -144,4 +144,11 @@ public class ParameterExpressionTest {
     }
   }
 
+  @Test
+  public void testParam(){
+    Map<String, String> result =  new ParameterExpression("user.id");
+    System.out.println(result);
+
+  }
+
 }

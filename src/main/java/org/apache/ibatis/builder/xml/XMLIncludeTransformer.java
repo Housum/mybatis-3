@@ -57,18 +57,25 @@ public class XMLIncludeTransformer {
    */
   private void applyIncludes(Node source, final Properties variablesContext, boolean included) {
     if (source.getNodeName().equals("include")) {
+      //从之前解析出来的sql 标记找
       Node toInclude = findSqlFragment(getStringAttribute(source, "refid"), variablesContext);
+      // 配置在其中的配置      
       Properties toIncludeContext = getVariablesContext(source, variablesContext);
+      //将配置符进行替换为sql ${}这种类型
       applyIncludes(toInclude, toIncludeContext, true);
       if (toInclude.getOwnerDocument() != source.getOwnerDocument()) {
         toInclude = source.getOwnerDocument().importNode(toInclude, true);
       }
+      //将原来的include进行替换了成了sql中的语言 并且将其中的配置${x}全部给替换了
       source.getParentNode().replaceChild(toInclude, source);
       while (toInclude.hasChildNodes()) {
+        //将sql到了 select|insert|update|delete语句中 在这一步include就全部被替换了 
         toInclude.getParentNode().insertBefore(toInclude.getFirstChild(), toInclude);
       }
+      //将原先的那个给删除了
       toInclude.getParentNode().removeChild(toInclude);
     } else if (source.getNodeType() == Node.ELEMENT_NODE) {
+      //对于select|insert|update|delete中可能包含include标签所以这里进行替换 
       NodeList children = source.getChildNodes();
       for (int i = 0; i < children.getLength(); i++) {
         applyIncludes(children.item(i), variablesContext, included);
@@ -84,6 +91,7 @@ public class XMLIncludeTransformer {
     refid = PropertyParser.parse(refid, variables);
     refid = builderAssistant.applyCurrentNamespace(refid, true);
     try {
+      //这里之前已经解析sql标签 存放在了配置中心   @see org.apache.ibatis.builder.xml.XMLMapperBuilder#sqlElement(java.util.List<org.apache.ibatis.parsing.XNode>)
       XNode nodeToInclude = configuration.getSqlFragments().get(refid);
       return nodeToInclude.getNode().cloneNode(true);
     } catch (IllegalArgumentException e) {

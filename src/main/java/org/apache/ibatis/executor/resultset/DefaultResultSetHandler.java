@@ -182,13 +182,18 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     final List<Object> multipleResults = new ArrayList<Object>();
 
     int resultSetCount = 0;
+    //获取ResultSet
     ResultSetWrapper rsw = getFirstResultSet(stmt);
 
     List<ResultMap> resultMaps = mappedStatement.getResultMaps();
+    //校验是否存在返回类型映射 如果木有的话 那么抛出异常
     int resultMapCount = resultMaps.size();
     validateResultMapsCount(rsw, resultMapCount);
+    //这里可能出现多个ResultMap 映射到同一个实体上 可以通过","进行分割
+    //org.apache.ibatis.builder.MapperBuilderAssistant.getStatementResultMaps
     while (rsw != null && resultMapCount > resultSetCount) {
       ResultMap resultMap = resultMaps.get(resultSetCount);
+      //当前ResultMap处理
       handleResultSet(rsw, resultMap, multipleResults, null);
       rsw = getNextResultSet(stmt);
       cleanUpAfterHandlingResultSet();
@@ -341,6 +346,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   private void handleRowValuesForSimpleResultMap(ResultSetWrapper rsw, ResultMap resultMap, ResultHandler<?> resultHandler, RowBounds rowBounds, ResultMapping parentMapping)
       throws SQLException {
     DefaultResultContext<Object> resultContext = new DefaultResultContext<Object>();
+    //对于RowBounds对象 跳过记录
     skipRows(rsw.getResultSet(), rowBounds);
     while (shouldProcessMoreRows(resultContext, rowBounds) && rsw.getResultSet().next()) {
       ResultMap discriminatedResultMap = resolveDiscriminatedResultMap(rsw.getResultSet(), resultMap, null);
@@ -364,15 +370,23 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   }
 
   private boolean shouldProcessMoreRows(ResultContext<?> context, RowBounds rowBounds) throws SQLException {
+    //如果是实现了rowBounds的话 那么舍弃掉后面的哪部分数据
     return !context.isStopped() && context.getResultCount() < rowBounds.getLimit();
   }
 
+  /**
+   * 跳过不需的列
+   * @param rs
+   * @param rowBounds
+   * @throws SQLException
+   */
   private void skipRows(ResultSet rs, RowBounds rowBounds) throws SQLException {
     if (rs.getType() != ResultSet.TYPE_FORWARD_ONLY) {
       if (rowBounds.getOffset() != RowBounds.NO_ROW_OFFSET) {
         rs.absolute(rowBounds.getOffset());
       }
     } else {
+      //对于使用rowBounds的实现方式极其的简单 实现方式就是查询出来 然后跳过这部分的数据
       for (int i = 0; i < rowBounds.getOffset(); i++) {
         rs.next();
       }

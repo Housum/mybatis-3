@@ -34,6 +34,7 @@ import java.util.Set;
 public class MapperRegistry {
 
   private final Configuration config;
+  //在mybatis中 我们定义的都是interface 这里使用了JDK的Proxy生成的代理
   private final Map<Class<?>, MapperProxyFactory<?>> knownMappers = new HashMap<Class<?>, MapperProxyFactory<?>>();
 
   public MapperRegistry(Configuration config) {
@@ -59,15 +60,19 @@ public class MapperRegistry {
 
   public <T> void addMapper(Class<T> type) {
     if (type.isInterface()) {
+      //如果已经存在的话 那么就直接抛异常了
       if (hasMapper(type)) {
         throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
       }
       boolean loadCompleted = false;
       try {
+        //这里只是简单的将其放入到knownMappers中 并没有生成代理 是懒加载的方式
         knownMappers.put(type, new MapperProxyFactory<T>(type));
         // It's important that the type is added before the parser is run
         // otherwise the binding may automatically be attempted by the
         // mapper parser. If the type is already known, it won't try.
+
+        //对于是注解的方式 这里很重要 将这部分注解生成MappedStatement 因为对于执行的具体SQL 是在其中定义的
         MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
         parser.parse();
         loadCompleted = true;

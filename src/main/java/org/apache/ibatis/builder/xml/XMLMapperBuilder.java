@@ -48,6 +48,7 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 
 /**
+ * 对文件级别xml配置的解析
  * @author Clinton Begin
  */
 public class XMLMapperBuilder extends BaseBuilder {
@@ -88,12 +89,18 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   public void parse() {
+    //如果未加载的话
     if (!configuration.isResourceLoaded(resource)) {
+      //这其中就是解析具体xml中的参数
       configurationElement(parser.evalNode("/mapper"));
+      //记录加载过的资源
       configuration.addLoadedResource(resource);
+      //前面部分已经通过xml创建了对于的SQL执行参数以及SQL语言等,但是还木有关联上我们定义的Mapper接口 这里就是通过代理技术生成一个代理类
+      //生成的关键就是通过namespace找到接口 如果木有制定的话 那么在使用接口的时候 会报错
       bindMapperForNamespace();
     }
 
+    //在解析这些参数的时候 可能就出现错误 延迟到现在再重试执行
     parsePendingResultMaps();
     parsePendingCacheRefs();
     parsePendingStatements();
@@ -114,6 +121,7 @@ public class XMLMapperBuilder extends BaseBuilder {
       cacheElement(context.evalNode("cache"));
       parameterMapElement(context.evalNodes("/mapper/parameterMap"));
       resultMapElements(context.evalNodes("/mapper/resultMap"));
+      //这是sql片段
       sqlElement(context.evalNodes("/mapper/sql"));
       buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
     } catch (Exception e) {
@@ -198,6 +206,7 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private void cacheElement(XNode context) throws Exception {
     if (context != null) {
+      //策略类
       String type = context.getStringAttribute("type", "PERPETUAL");
       Class<? extends Cache> typeClass = typeAliasRegistry.resolveAlias(type);
       String eviction = context.getStringAttribute("eviction", "LRU");
@@ -211,6 +220,9 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * parameterMap 已过期
+   */
   private void parameterMapElement(List<XNode> list) throws Exception {
     for (XNode parameterMapNode : list) {
       String id = parameterMapNode.getStringAttribute("id");
@@ -248,19 +260,29 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * https://mybatis.org/mybatis-3/sqlmap-xml.html#Result_Maps
+   */
   private ResultMap resultMapElement(XNode resultMapNode) throws Exception {
     return resultMapElement(resultMapNode, Collections.<ResultMapping> emptyList());
   }
 
   private ResultMap resultMapElement(XNode resultMapNode, List<ResultMapping> additionalResultMappings) throws Exception {
     ErrorContext.instance().activity("processing " + resultMapNode.getValueBasedIdentifier());
+    //ResultMap的ID
     String id = resultMapNode.getStringAttribute("id",
+        //这里如果木有id的话 就生成一个默认的? 这里显然不行 因为schema已经定义了不能缺少
         resultMapNode.getValueBasedIdentifier());
+
+    //类型
     String type = resultMapNode.getStringAttribute("type",
         resultMapNode.getStringAttribute("ofType",
             resultMapNode.getStringAttribute("resultType",
                 resultMapNode.getStringAttribute("javaType"))));
+
     String extend = resultMapNode.getStringAttribute("extends");
+
+    //https://blog.csdn.net/u010643307/article/details/70148746
     Boolean autoMapping = resultMapNode.getBooleanAttribute("autoMapping");
     Class<?> typeClass = resolveClass(type);
     Discriminator discriminator = null;
@@ -268,15 +290,19 @@ public class XMLMapperBuilder extends BaseBuilder {
     resultMappings.addAll(additionalResultMappings);
     List<XNode> resultChildren = resultMapNode.getChildren();
     for (XNode resultChild : resultChildren) {
+
       if ("constructor".equals(resultChild.getName())) {
+        //构造器的
         processConstructorElement(resultChild, typeClass, resultMappings);
       } else if ("discriminator".equals(resultChild.getName())) {
+        //选择器
         discriminator = processDiscriminatorElement(resultChild, typeClass, resultMappings);
       } else {
         List<ResultFlag> flags = new ArrayList<ResultFlag>();
         if ("id".equals(resultChild.getName())) {
           flags.add(ResultFlag.ID);
         }
+        //对于具体的映射
         resultMappings.add(buildResultMappingFromContext(resultChild, typeClass, flags));
       }
     }
@@ -327,6 +353,8 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   private void sqlElement(List<XNode> list, String requiredDatabaseId) throws Exception {
+    //对于sql标签首先是加入到sqlFragments，等后面select|insert|update|delete 解析的时候遇到了include的时候 再拿出来
+    //使用 使用的方式就是将这部分的sql内容替换到include中去
     for (XNode context : list) {
       String databaseId = context.getStringAttribute("databaseId");
       String id = context.getStringAttribute("id");
@@ -357,6 +385,11 @@ public class XMLMapperBuilder extends BaseBuilder {
     return true;
   }
 
+  /**
+   * 对于resultMap的属性都保存在了ResultMapping中
+   *
+   *
+   */
   private ResultMapping buildResultMappingFromContext(XNode context, Class<?> resultType, List<ResultFlag> flags) throws Exception {
     String property;
     if (flags.contains(ResultFlag.CONSTRUCTOR)) {
@@ -404,6 +437,8 @@ public class XMLMapperBuilder extends BaseBuilder {
       } catch (ClassNotFoundException e) {
         //ignore, bound type is not required
       }
+
+      //这里通过mapper加载class 这里很关键 这里关联上了class 同时生成代理对象
       if (boundType != null) {
         if (!configuration.hasMapper(boundType)) {
           // Spring may not know the real resource name so we set a flag

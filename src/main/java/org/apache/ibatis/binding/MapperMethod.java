@@ -35,6 +35,9 @@ import java.lang.reflect.Type;
 import java.util.*;
 
 /**
+ * 对于Mapper类代理来说 这里是最原子的类了
+ * 整个过程：
+ * MapperRegistry->MapperProxyFactory->MapperProxy->MapperMethod
  * @author Clinton Begin
  * @author Eduardo Macarron
  * @author Lasse Voss
@@ -45,7 +48,9 @@ public class MapperMethod {
   private final MethodSignature method;
 
   public MapperMethod(Class<?> mapperInterface, Method method, Configuration config) {
+    //执行
     this.command = new SqlCommand(config, mapperInterface, method);
+    //构建方法签名
     this.method = new MethodSignature(config, mapperInterface, method);
   }
 
@@ -53,7 +58,11 @@ public class MapperMethod {
     Object result;
     switch (command.getType()) {
       case INSERT: {
+        //解析参数 对于@Param指定参数的情况 进行解析 在这里解析之后 参数就已经放在了Map中
+        //后面在设置参数的时候 就可以直接通过map中获取了
+        //org.apache.ibatis.reflection.ParamNameResolver.ParamNameResolver
     	Object param = method.convertArgsToSqlCommandParam(args);
+    	//将执行的唯一Id传入到sqlSession
         result = rowCountResult(sqlSession.insert(command.getName(), param));
         break;
       }
@@ -69,6 +78,8 @@ public class MapperMethod {
       }
       case SELECT:
         if (method.returnsVoid() && method.hasResultHandler()) {
+          //这种情况是结果将在ResultHandler中处理
+          //org.apache.ibatis.submitted.result_handler.ResulthandlerTest
           executeWithResultHandler(sqlSession, args);
           result = null;
         } else if (method.returnsMany()) {
@@ -104,6 +115,7 @@ public class MapperMethod {
     } else if (Long.class.equals(method.getReturnType()) || Long.TYPE.equals(method.getReturnType())) {
       result = (long)rowCount;
     } else if (Boolean.class.equals(method.getReturnType()) || Boolean.TYPE.equals(method.getReturnType())) {
+      //可以返回boolean 是否操作成功
       result = rowCount > 0;
     } else {
       throw new BindingException("Mapper method '" + command.getName() + "' has an unsupported return type: " + method.getReturnType());
@@ -113,6 +125,7 @@ public class MapperMethod {
 
   private void executeWithResultHandler(SqlSession sqlSession, Object[] args) {
     MappedStatement ms = sqlSession.getConfiguration().getMappedStatement(command.getName());
+    //对于ResultHandler需要指定返回的类型
     if (void.class.equals(ms.getResultMaps().get(0).getType())) {
       throw new BindingException("method " + command.getName() 
           + " needs either a @ResultMap annotation, a @ResultType annotation," 
@@ -120,6 +133,7 @@ public class MapperMethod {
     }
     Object param = method.convertArgsToSqlCommandParam(args);
     if (method.hasRowBounds()) {
+      //指定范围
       RowBounds rowBounds = method.extractRowBounds(args);
       sqlSession.select(command.getName(), param, rowBounds, method.extractResultHandler(args));
     } else {
@@ -243,12 +257,14 @@ public class MapperMethod {
 
     private MappedStatement resolveMappedStatement(Class<?> mapperInterface, String methodName,
         Class<?> declaringClass, Configuration configuration) {
+      //这里是通过
       String statementId = mapperInterface.getName() + "." + methodName;
       if (configuration.hasStatement(statementId)) {
         return configuration.getMappedStatement(statementId);
       } else if (mapperInterface.equals(declaringClass)) {
         return null;
       }
+      //查询方法属于哪个父类接口
       for (Class<?> superInterface : mapperInterface.getInterfaces()) {
         if (declaringClass.isAssignableFrom(superInterface)) {
           MappedStatement ms = resolveMappedStatement(superInterface, methodName,
@@ -262,37 +278,68 @@ public class MapperMethod {
     }
   }
 
+  /**
+   * 方法签名对象
+   */
   public static class MethodSignature {
 
+    /**
+     * 执行方法返回的类型
+     */
     private final boolean returnsMany;
     private final boolean returnsMap;
     private final boolean returnsVoid;
     private final boolean returnsCursor;
+    /**
+     * 返回的类型
+     */
     private final Class<?> returnType;
+    //MapKey
     private final String mapKey;
     private final Integer resultHandlerIndex;
+    /**
+     * rowBound存在的位置
+     */
     private final Integer rowBoundsIndex;
+    /**
+     * 参数解析 有状态的对象 可以通过这里解析出来
+     * SQL片段中的参数值
+     */
     private final ParamNameResolver paramNameResolver;
 
     public MethodSignature(Configuration configuration, Class<?> mapperInterface, Method method) {
       Type resolvedReturnType = TypeParameterResolver.resolveReturnType(method, mapperInterface);
       if (resolvedReturnType instanceof Class<?>) {
+        //对象类型
         this.returnType = (Class<?>) resolvedReturnType;
       } else if (resolvedReturnType instanceof ParameterizedType) {
+        //如果是一个范型对象
         this.returnType = (Class<?>) ((ParameterizedType) resolvedReturnType).getRawType();
       } else {
         this.returnType = method.getReturnType();
       }
+      //下面解析返回类型
+      //木有返回类型
       this.returnsVoid = void.class.equals(this.returnType);
+      //返回的是集合对象
       this.returnsMany = (configuration.getObjectFactory().isCollection(this.returnType) || this.returnType.isArray());
+      //返回游标对象
       this.returnsCursor = Cursor.class.equals(this.returnType);
+      //是否有MapKey注解处理
       this.mapKey = getMapKey(method);
+      //是否返回Map
       this.returnsMap = (this.mapKey != null);
+      //范围指定：RowBounds
       this.rowBoundsIndex = getUniqueParamIndex(method, RowBounds.class);
+      //结果处理: ResultHandler
       this.resultHandlerIndex = getUniqueParamIndex(method, ResultHandler.class);
+      //参数解析
       this.paramNameResolver = new ParamNameResolver(configuration, method);
     }
 
+    /**
+     * 将方法的参数转化成Sql可以使用的参数
+     */
     public Object convertArgsToSqlCommandParam(Object[] args) {
       return paramNameResolver.getNamedParams(args);
     }

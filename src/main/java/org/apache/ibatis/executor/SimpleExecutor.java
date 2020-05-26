@@ -45,6 +45,7 @@ public class SimpleExecutor extends BaseExecutor {
     Statement stmt = null;
     try {
       Configuration configuration = ms.getConfiguration();
+      //默认是木有限制数目 语句定义处理器
       StatementHandler handler = configuration.newStatementHandler(this, ms, parameter, RowBounds.DEFAULT, null, null);
       stmt = prepareStatement(handler, ms.getStatementLog());
       return handler.update(stmt);
@@ -81,8 +82,11 @@ public class SimpleExecutor extends BaseExecutor {
 
   private Statement prepareStatement(StatementHandler handler, Log statementLog) throws SQLException {
     Statement stmt;
+    //这里获取一个连接
     Connection connection = getConnection(statementLog);
+    //预先处理
     stmt = handler.prepare(connection, transaction.getTimeout());
+    //进行参数的设置
     handler.parameterize(stmt);
     return stmt;
   }

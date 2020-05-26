@@ -16,8 +16,13 @@
 package org.apache.ibatis.scripting.xmltags;
 
 /**
+ * 代表一个SQL片段 类似于装饰模式 将各种类型的SQL片段
+ * 组合到一个完整的SQL
+ *
  * @author Clinton Begin
  */
 public interface SqlNode {
+
+  //将当前的SQL片段进行解析
   boolean apply(DynamicContext context);
 }

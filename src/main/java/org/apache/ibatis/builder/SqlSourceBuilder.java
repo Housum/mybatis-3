@@ -19,16 +19,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.ibatis.binding.MapperMethod;
 import org.apache.ibatis.mapping.ParameterMapping;
 import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.parsing.GenericTokenParser;
 import org.apache.ibatis.parsing.TokenHandler;
 import org.apache.ibatis.reflection.MetaClass;
 import org.apache.ibatis.reflection.MetaObject;
+import org.apache.ibatis.reflection.ParamNameResolver;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 
 /**
+ * 对SQL进行解析 这一步主要解析的就是将#{}参数进行解析 放入到Map中，然后替换成"？"，这是将SQL文件中
+ * 的参数名称进行保存。那么在运行的时候 怎么将参数和实际进来的参数进行映射呢，这一部分是在运行中做的
+ * @see ParamNameResolver
+ * @see MapperMethod.MethodSignature#convertArgsToSqlCommandParam(java.lang.Object[])
+ *
  * @author Clinton Begin
  */
 public class SqlSourceBuilder extends BaseBuilder {
@@ -40,12 +47,16 @@ public class SqlSourceBuilder extends BaseBuilder {
   }
 
   public SqlSource parse(String originalSql, Class<?> parameterType, Map<String, Object> additionalParameters) {
+    //这里解析出SQL中参数的名称 #{}指定的
     ParameterMappingTokenHandler handler = new ParameterMappingTokenHandler(configuration, parameterType, additionalParameters);
     GenericTokenParser parser = new GenericTokenParser("#{", "}", handler);
     String sql = parser.parse(originalSql);
     return new StaticSqlSource(configuration, sql, handler.getParameterMappings());
   }
 
+  /**
+   * SQL中#{}参数进行构建
+   */
   private static class ParameterMappingTokenHandler extends BaseBuilder implements TokenHandler {
 
     private List<ParameterMapping> parameterMappings = new ArrayList<ParameterMapping>();
@@ -64,12 +75,14 @@ public class SqlSourceBuilder extends BaseBuilder {
 
     @Override
     public String handleToken(String content) {
+      //对于#{}进行替换成？并且将参数放入到了List<ParameterMapping>中
       parameterMappings.add(buildParameterMapping(content));
       return "?";
     }
 
     private ParameterMapping buildParameterMapping(String content) {
       Map<String, String> propertiesMap = parseParameterMapping(content);
+      //参数
       String property = propertiesMap.get("property");
       Class<?> propertyType;
       if (metaParameters.hasGetter(property)) { // issue #448 get type from additional params
@@ -91,6 +104,9 @@ public class SqlSourceBuilder extends BaseBuilder {
       ParameterMapping.Builder builder = new ParameterMapping.Builder(configuration, property, propertyType);
       Class<?> javaType = propertyType;
       String typeHandlerAlias = null;
+
+      //解析参数中的配置
+      //https://mybatis.org/mybatis-3/zh/sqlmap-xml.html#Parameters
       for (Map.Entry<String, String> entry : propertiesMap.entrySet()) {
         String name = entry.getKey();
         String value = entry.getValue();

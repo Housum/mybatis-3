@@ -23,6 +23,7 @@ import org.apache.ibatis.scripting.ScriptingException;
 import org.apache.ibatis.type.SimpleTypeRegistry;
 
 /**
+ * 文本方式的片段 这种方式会解析动态SQL ${}
  * @author Clinton Begin
  */
 public class TextSqlNode implements SqlNode {
@@ -74,6 +75,8 @@ public class TextSqlNode implements SqlNode {
       } else if (SimpleTypeRegistry.isSimpleType(parameter.getClass())) {
         context.getBindings().put("value", parameter);
       }
+      //OGNL解析 在context中将参数和databaseId作为表达式的参数传入到
+      //了环境中 org.apache.ibatis.scripting.xmltags.DynamicContext.DynamicContext
       Object value = OgnlCache.getValue(content, context.getBindings());
       String srtValue = (value == null ? "" : String.valueOf(value)); // issue #274 return "" instead of "null"
       checkInjection(srtValue);

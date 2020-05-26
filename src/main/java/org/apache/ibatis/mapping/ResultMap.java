@@ -34,6 +34,8 @@ import org.apache.ibatis.reflection.ParamNameUtil;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ * https://mybatis.org/mybatis-3/sqlmap-xml.html#Result_Maps
+ *
  * @author Clinton Begin
  */
 public class ResultMap {

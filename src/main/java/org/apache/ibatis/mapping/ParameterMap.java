@@ -21,6 +21,8 @@ import java.util.List;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ * 参数映射 这里映射有两层 一种是通过ParamType指定的 一种是是通过
+ * ParamMap指定的（这种已经废弃了）
  * @author Clinton Begin
  */
 public class ParameterMap {

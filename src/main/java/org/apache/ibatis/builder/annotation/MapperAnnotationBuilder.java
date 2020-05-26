@@ -94,6 +94,7 @@ import org.apache.ibatis.type.UnknownTypeHandler;
  */
 public class MapperAnnotationBuilder {
 
+  //sql支持的注解
   private final Set<Class<? extends Annotation>> sqlAnnotationTypes = new HashSet<Class<? extends Annotation>>();
   private final Set<Class<? extends Annotation>> sqlProviderAnnotationTypes = new HashSet<Class<? extends Annotation>>();
 
@@ -120,7 +121,9 @@ public class MapperAnnotationBuilder {
 
   public void parse() {
     String resource = type.toString();
+    //这里检查是否加载过该配置
     if (!configuration.isResourceLoaded(resource)) {
+      //这里通过 class的全路径.xml尝试加载xml配置文件
       loadXmlResource();
       configuration.addLoadedResource(resource);
       assistant.setCurrentNamespace(type.getName());
@@ -161,9 +164,11 @@ public class MapperAnnotationBuilder {
     // to prevent loading again a resource twice
     // this flag is set at XMLMapperBuilder#bindMapperForNamespace
     if (!configuration.isResourceLoaded("namespace:" + type.getName())) {
+      //从这个位置加载
       String xmlResource = type.getName().replace('.', '/') + ".xml";
       InputStream inputStream = null;
       try {
+        //这里只是尝试加载
         inputStream = Resources.getResourceAsStream(type.getClassLoader(), xmlResource);
       } catch (IOException e) {
         // ignore, resource is not required

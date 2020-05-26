@@ -30,6 +30,7 @@ import org.apache.ibatis.session.Configuration;
 
 /**
  * @author Clinton Begin
+ * 很关键的地方 相当于JDBC中的Statment 其中封装了参数 SQL 执行类型等等
  */
 public final class MappedStatement {
 
@@ -38,21 +39,31 @@ public final class MappedStatement {
   private String id;
   private Integer fetchSize;
   private Integer timeout;
+  //执行方式
   private StatementType statementType;
+  //结果类型
   private ResultSetType resultSetType;
+  //SQL
   private SqlSource sqlSource;
+  //关联的缓存
   private Cache cache;
   private ParameterMap parameterMap;
+  //
   private List<ResultMap> resultMaps;
   private boolean flushCacheRequired;
+  //是否使用二级缓存
   private boolean useCache;
   private boolean resultOrdered;
+  //SQL的执行类型
   private SqlCommandType sqlCommandType;
+  //ID生成器
   private KeyGenerator keyGenerator;
   private String[] keyProperties;
+  //在执行之后返回的字段
   private String[] keyColumns;
   private boolean hasNestedResultMaps;
   private String databaseId;
+  //执行语句的处理对象
   private Log statementLog;
   private LanguageDriver lang;
   private String[] resultSets;
@@ -291,6 +302,7 @@ public final class MappedStatement {
   public BoundSql getBoundSql(Object parameterObject) {
     BoundSql boundSql = sqlSource.getBoundSql(parameterObject);
     List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+    //如果参数为空的话 那么将解析到的参数加入到其中
     if (parameterMappings == null || parameterMappings.isEmpty()) {
       boundSql = new BoundSql(configuration, boundSql.getSql(), parameterMap.getParameterMappings(), parameterObject);
     }

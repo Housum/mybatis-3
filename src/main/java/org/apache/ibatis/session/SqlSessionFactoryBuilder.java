@@ -26,12 +26,15 @@ import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.session.defaults.DefaultSqlSessionFactory;
 
 /**
+ * 这是mybatis的入口 创建一个SqlSession实例
+ * 这里会初始化配置文件 初始化Mapper类
  * Builds {@link SqlSession} instances.
  *
  * @author Clinton Begin
  */
 public class SqlSessionFactoryBuilder {
 
+  //---根据配置文件创建实例---
   public SqlSessionFactory build(Reader reader) {
     return build(reader, null, null);
   }

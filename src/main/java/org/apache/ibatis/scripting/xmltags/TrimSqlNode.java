@@ -29,6 +29,7 @@ import org.apache.ibatis.session.Configuration;
  */
 public class TrimSqlNode implements SqlNode {
 
+  //子标签
   private SqlNode contents;
   private String prefix;
   private String suffix;
@@ -84,12 +85,16 @@ public class TrimSqlNode implements SqlNode {
     }
 
     public void applyAll() {
+      //进行处理 trim
       sqlBuffer = new StringBuilder(sqlBuffer.toString().trim());
       String trimmedUppercaseSql = sqlBuffer.toString().toUpperCase(Locale.ENGLISH);
+      //这里是啥意思呢？ 这是在TrimNode执行之后会执行appendSql所以sqlBuffer就是其中的
+      //TrimNode内部内容 即contents这部分内容
       if (trimmedUppercaseSql.length() > 0) {
         applyPrefix(sqlBuffer, trimmedUppercaseSql);
         applySuffix(sqlBuffer, trimmedUppercaseSql);
       }
+      //处理完成之后 将SQL增加到后面
       delegate.appendSql(sqlBuffer.toString());
     }
 
@@ -121,6 +126,7 @@ public class TrimSqlNode implements SqlNode {
     private void applyPrefix(StringBuilder sql, String trimmedUppercaseSql) {
       if (!prefixApplied) {
         prefixApplied = true;
+        //这部分是前缀需要覆盖掉的
         if (prefixesToOverride != null) {
           for (String toRemove : prefixesToOverride) {
             if (trimmedUppercaseSql.startsWith(toRemove)) {
@@ -129,6 +135,7 @@ public class TrimSqlNode implements SqlNode {
             }
           }
         }
+        //这部分是需要增加的
         if (prefix != null) {
           sql.insert(0, " ");
           sql.insert(0, prefix);
@@ -139,6 +146,7 @@ public class TrimSqlNode implements SqlNode {
     private void applySuffix(StringBuilder sql, String trimmedUppercaseSql) {
       if (!suffixApplied) {
         suffixApplied = true;
+        //这部分是后缀需要覆盖的
         if (suffixesToOverride != null) {
           for (String toRemove : suffixesToOverride) {
             if (trimmedUppercaseSql.endsWith(toRemove) || trimmedUppercaseSql.endsWith(toRemove.trim())) {
@@ -149,6 +157,7 @@ public class TrimSqlNode implements SqlNode {
             }
           }
         }
+        //这部分是后缀需要增加的
         if (suffix != null) {
           sql.append(" ");
           sql.append(suffix);

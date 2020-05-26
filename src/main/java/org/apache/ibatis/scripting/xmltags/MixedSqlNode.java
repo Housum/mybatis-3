@@ -18,6 +18,7 @@ package org.apache.ibatis.scripting.xmltags;
 import java.util.List;
 
 /**
+ * 组合SqlNode
  * @author Clinton Begin
  */
 public class MixedSqlNode implements SqlNode {
@@ -29,6 +30,7 @@ public class MixedSqlNode implements SqlNode {
 
   @Override
   public boolean apply(DynamicContext context) {
+    //对所有的SQL片段进行执行 对这些片段都执行完成之后 DynamicContext中就是完整的SQL数据了
     for (SqlNode sqlNode : contents) {
       sqlNode.apply(context);
     }

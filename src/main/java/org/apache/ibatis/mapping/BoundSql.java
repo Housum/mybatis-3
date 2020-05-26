@@ -31,6 +31,9 @@ import org.apache.ibatis.session.Configuration;
  * </br>
  * Can also have additional parameters that are created by the dynamic language (for loops, bind...).
  *
+ *  具体的执行SQL，其中的参数已经是?了,parameterMappings存储的就是他的参数
+ *  SQL就是他的执行物理SQL
+ *
  * @author Clinton Begin
  */
 public class BoundSql {

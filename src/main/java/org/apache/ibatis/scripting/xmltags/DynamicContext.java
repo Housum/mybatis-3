@@ -49,6 +49,7 @@ public class DynamicContext {
     } else {
       bindings = new ContextMap(null);
     }
+    //以下作为OGNL表达式的参数
     bindings.put(PARAMETER_OBJECT_KEY, parameterObject);
     bindings.put(DATABASE_ID_KEY, configuration.getDatabaseId());
   }
